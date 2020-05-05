@@ -15,7 +15,7 @@ def get_class_label(f_name):
 
 #get all the classes (given as strings) and assign them each an index and create a class_dict
 #that maps class string to class index
-RAW_DATA_DIR = "rawData/"
+RAW_DATA_DIR = "ucf101-raw/"
 DATA_DIR = "data/"
 classes = set()
 class_dict = {}
@@ -36,12 +36,17 @@ for f_name in tqdm(glob.glob(RAW_DATA_DIR+"*")):
     if count % 100 == 0:
         time.sleep(1)
     vidcap = cv2.VideoCapture(f_name)
-    success,image = vidcap.read()
-
+    num_frames = int(vidcap.get(cv2.CAP_PROP_FRAME_COUNT))
+    sample_rate = num_frames//4
+    count = 0
+    success, image = vidcap.read()
     while success:
-        X.append(np.array(image))
-        y.append(class_dict[get_class_label(f_name)])
-        success,image = vidcap.read()
+        if count % sample_rate == 0:
+            X.append(np.array(image))
+            y.append(class_dict[get_class_label(f_name)])
+        success, image = vidcap.read()
+        count += 1
+    break
 
 X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.3, random_state=1, stratify = y)
 X_dev, X_test, y_dev, y_test = train_test_split(X_val, y_val, test_size=0.5, random_state=1, stratify = y_val)
@@ -50,7 +55,5 @@ np.save(DATA_DIR + "X_train", X_train)
 np.save(DATA_DIR + "y_train", y_train)
 np.save(DATA_DIR + "X_dev", X_dev)
 np.save(DATA_DIR + "y_dev", y_dev)
-np.save(DATA_DIR + "X_test", X_test)
-np.save(DATA_DIR + "y_test", y_test)
 
 
