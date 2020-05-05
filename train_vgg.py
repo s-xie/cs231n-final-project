@@ -69,6 +69,35 @@ def get_cfar10_local():
 	test_dataset = tf.data.Dataset.from_tensor_slices((test_features, test_labels))
 	return train_dataset, test_dataset, num_train_examples
 
+def get_cfar10_gcp():
+	train_features = None
+	train_labels = None
+	for batch_i in range(1, 6):
+		#features, labels = load_cfar10_batch(batch_i)
+		encoded_labels = one_hot_encode(labels)
+		if batch_i == 1:
+			train_features = features 
+			train_labels = encoded_labels
+		else:
+			train_features = np.concatenate((train_features, features), axis = 0)
+			train_labels = np.concatenate((train_labels, encoded_labels), axis = 0)
+	print(train_features.shape)
+	print(train_labels.shape)
+	num_train_examples = train_features.shape[0]
+
+	test_features, test_labels = None, None
+	with open('../cifar-10-batches-py' + '/test_batch', mode='rb') as file:
+		batch = pickle.load(file, encoding='latin1')
+
+		# preprocess the testing data
+		test_features = batch['data'].reshape((len(batch['data']), 3, 32, 32)).transpose(0, 2, 3, 1)
+		test_labels = batch['labels']
+		test_labels = one_hot_encode(test_labels)
+
+	train_dataset = tf.data.Dataset.from_tensor_slices((train_features, train_labels))
+	test_dataset = tf.data.Dataset.from_tensor_slices((test_features, test_labels))
+	return train_dataset, test_dataset, num_train_examples
+
 train_dataset, test_dataset, num_train_examples = get_cfar10_local()
 
 # Image Normalization, Resizing, and Augmentation
