@@ -35,10 +35,15 @@ def load_cfar10_batch(batch_id):
 			
 	return features, labels
 
+def download_blob(bucket, source_blob_name, destination_file_name):
+	blob = bucket.blob(source_blob_name)
+	blob.download_to_filename(destination_file_name)
+
 def load_cfar10_batch_gcp(batch_id, bucket):
-	blob = bucket.get_blob('cifar-10-batches-py' + '/data_batch_' + str(batch_id))
-	blob.download_to_filename('/tmp/batch_'+str(batch_id))
-	with open('/tmp/batch_' + str(batch_id), mode = 'rb') as file:
+	source_blob_name = 'cifar-10-batches-py/data_batch_' + str(batch_id)
+	destination_file_name = '/tmp/batch_' + str(batch_id)
+	download_blob(bucket, source_blob_name, destination_file_name)
+	with open(destination_file_name, mode = 'rb') as file:
 		batch = pickle.load(file, encoding = 'latin1')
 	features = batch['data'].reshape((len(batch['data']), 3, 32, 32)).transpose(0, 2, 3, 1)
 	labels = batch['labels']
@@ -71,9 +76,7 @@ def get_cfar10_gcp():
 	test_features, test_labels = None, None
 	source_blob_name = 'cifar-10-batches-py/test_batch'
 	destination_file_name = '/tmp/test_batch'
-	blob = bucket.get_blob(source_blob_name)
-	blob.download_to_filename(destination_file_name)
-	print("Blob {} downloaded to {}.".format(source_blob_name, destination_file_name))
+	download_blob(bucket, source_blob_name, destination_file_name)
 	with open(destination_file_name, mode='rb') as file:
 		batch = pickle.load(file, encoding='latin1')
 		# preprocess the testing data
