@@ -15,8 +15,11 @@ def get_class_label(f_name):
 
 #get all the classes (given as strings) and assign them each an index and create a class_dict
 #that maps class string to class index
-RAW_DATA_DIR = "rawData/"
-DATA_DIR = "data/"
+RAW_DATA_DIR = "ucf101-raw/"
+OUTPUT_DATA_DIR = "data/"
+TRAIN_SPLIT = "ucfTrainTestlist/trainlist01.txt"
+DEV_SPLIT = "ucfTrainTestlist/testlist01.txt"
+
 classes = set()
 class_dict = {}
 
@@ -29,28 +32,46 @@ for i, c in enumerate(classes):
     class_dict[c] = i  
 print(class_dict)
 
+train_files = set()
+dev_files = set()
+
+with open(TRAIN_SPLIT, 'r') as f:
+    for l in f.readlines():
+        p = l.strip().split()[0]
+        p = p[p.index('/')+1:]
+        train_files.add(p)
+
+with open(DEV_SPLIT, 'r') as f:
+    for l in f.readlines():
+        p = l.strip().split()[0]
+        p = p[p.index('/')+1:]
+        dev_files.add(p)
+
+print(dev_files)
 count = 0
-X, y = [], []
+X_train, y_train, X_dev, y_dev = [], [], [], []
 for f_name in tqdm(glob.glob(RAW_DATA_DIR+"*")):
     count += 1
-    if count % 100 == 0:
-        time.sleep(1)
+    vid_name = f_name[f_name.index('/')+1:]
     vidcap = cv2.VideoCapture(f_name)
-    success,image = vidcap.read()
-
+    num_frames = int(vidcap.get(cv2.CAP_PROP_FRAME_COUNT))
+    sample_rate = num_frames//4
+    count = 0
+    success, image = vidcap.read()
     while success:
-        X.append(np.array(image))
-        y.append(class_dict[get_class_label(f_name)])
-        success,image = vidcap.read()
+        if count % sample_rate == 0:
+            if vid_name in train_files:
+                X_train.append(np.array(image))
+                y_train.append(class_dict[get_class_label(f_name)])
+            elif vid_name in dev_files:
+                X_dev.append(np.array(image))
+                y_dev.append(class_dict[get_class_label(f_name)])
+        success, image = vidcap.read()
+        count += 1
 
-X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.3, random_state=1, stratify = y)
-X_dev, X_test, y_dev, y_test = train_test_split(X_val, y_val, test_size=0.5, random_state=1, stratify = y_val)
-
-np.save(DATA_DIR + "X_train", X_train)
-np.save(DATA_DIR + "y_train", y_train)
-np.save(DATA_DIR + "X_dev", X_dev)
-np.save(DATA_DIR + "y_dev", y_dev)
-np.save(DATA_DIR + "X_test", X_test)
-np.save(DATA_DIR + "y_test", y_test)
+np.save(OUTPUT_DATA_DIR + "X_train", X_train)
+np.save(OUTPUT_DATA_DIR + "y_train", y_train)
+np.save(OUTPUT_DATA_DIR + "X_dev", X_dev)
+np.save(OUTPUT_DATA_DIR + "y_dev", y_dev)
 
 
