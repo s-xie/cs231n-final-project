@@ -27,8 +27,24 @@ def augment(image,label):
 def one_hot_encode(y, num_classes):
 	encoded = np.zeros((len(y), num_classes))
 	for idx, val in enumerate(y):
-		encoded[idx][val] = 1
+		encoded[idx][int(val)] = 1
 	return encoded
+
+# Returns the indices corresponding to the n largest values of arr
+def top_n_indices(arr, n):
+	idx = (-arr).argsort()[:n]
+	return idx
+
+# Returns the top n accuracy of a set of predictions
+# y_true - [num_examples, ] numpy array of true classes
+#y_pred - [num_examples, n] numpy array of top n predicted classes
+def top_n_accuracy(y_true, y_pred):
+	num_correct = 0
+	num_examples = y_true.shape[0]
+	for i in range(y_true.shape[0]):
+		if y_true[i] in list(y_pred[i,:]):
+			num_correct += 1
+	return num_correct/num_examples
 
 # Return GCP Storage bucket for the project
 def get_bucket():
@@ -91,9 +107,10 @@ def get_cfar10_gcp(num_classes):
 		test_labels = batch['labels']
 		test_labels = one_hot_encode(test_labels, num_classes)
 
+	num_test_examples = test_features.shape[0]
 	train_dataset = tf.data.Dataset.from_tensor_slices((train_features, train_labels))
 	test_dataset = tf.data.Dataset.from_tensor_slices((test_features, test_labels))
-	return train_dataset, test_dataset, num_train_examples
+	return train_dataset, test_dataset, num_train_examples, num_test_examples
 
 # Load training and validation datasets for CIFAR 10 from local machine
 def get_cfar10_local(num_classes):
@@ -121,8 +138,9 @@ def get_cfar10_local(num_classes):
 		test_labels = batch['labels']
 		test_labels = one_hot_encode(test_labels, num_classes)
 
+	num_test_examples = test_features.shape[0]
 	train_dataset = tf.data.Dataset.from_tensor_slices((train_features, train_labels))
 	test_dataset = tf.data.Dataset.from_tensor_slices((test_features, test_labels))
-	return train_dataset, test_dataset, num_train_examples
+	return train_dataset, test_dataset, num_train_examples, num_test_examples
 
 

@@ -38,9 +38,9 @@ def clip():
 args = clip()
 data_flag = args.d
 if data_flag == 'local':
-	train_dataset, test_dataset, num_train_examples = get_cfar10_local(N_CLASSES)
+	train_dataset, test_dataset, num_train_examples, num_test_examples = get_cfar10_local(N_CLASSES)
 else:
-	train_dataset, test_dataset, num_train_examples = get_cfar10_gcp(N_CLASSES)
+	train_dataset, test_dataset, num_train_examples, num_test_examples = get_cfar10_gcp(N_CLASSES)
 
 # Generate batches at tf.data.Dataset objects, applying augmentation to training set
 # normalization/resizing applied to both training and validation sets
@@ -93,7 +93,7 @@ def get_model():
 # Make sure we have an output folder for model files, history, and plots
 if not os.path.exists(OUTPUT_DIR):
 	os.mkdir(OUTPUT_DIR)
-model_folder = os.path.join(OUTPUT_DIR, 'model_' + str(strftime("%Y-%m-%d_%H:%M:%S", gmtime())))
+model_folder = os.path.join(OUTPUT_DIR, 'model_' + str(strftime("%Y-%m-%d_%H-%M-%S", gmtime())))
 if not os.path.exists(model_folder):
 	os.mkdir(model_folder)
 plot_folder = os.path.join(model_folder, 'plots/')
