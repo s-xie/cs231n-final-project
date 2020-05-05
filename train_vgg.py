@@ -4,149 +4,61 @@ from tensorflow.keras import layers, models, optimizers, losses
 from tensorflow.keras.models import Model
 from tensorflow.keras.layers import Dense, Dropout, Activation, Flatten
 from tensorflow.keras.metrics import TopKCategoricalAccuracy, Accuracy
-from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping, TensorBoard
+from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping
 import pickle
 import numpy as np
 import matplotlib.pyplot as plt
 import os
 from time import gmtime, strftime
 from google.cloud import storage
+from utils import *
+import argparse
 AUTOTUNE = tf.data.experimental.AUTOTUNE
 
 # Constants & Parameters
-DATA_DIR = ""
+DATA_DIR = "" # to be added for UCF
 OUTPUT_DIR = "models/"
 IMG_SIZE = 224
 IMG_SHAPE = (IMG_SIZE, IMG_SIZE, 3)
-BATCH_SIZE = 64
-NUM_EXAMPLES = 1280 # Remove for actual training
+BATCH_SIZE = 25
+NUM_EXAMPLES = 100 # Remove for actual training
 N_CLASSES = 10 # 101 for actual training
 N_LAYERS_TO_FREEZE = 17 # freeze everything before the last conv layer
 lr = 1e-4
 
+def clip():
+	parser = argparse.ArgumentParser(description = 'Specify training details')
+	parser.add_argument('-d', required = True, choices = ['local', 'gcp'], 
+		help = 'local for local data storage, gcp for cloud data storage')
+	args = parser.parse_args()
+	print(args)
+	return args
+
 # Load Training & Validation Data
-def load_cfar10_batch(batch_id):
-	with open('../cifar-10-batches-py' + '/data_batch_' + str(batch_id), mode='rb') as file:
-		# note the encoding type is 'latin1'
-		batch = pickle.load(file, encoding='latin1')
-			
-	features = batch['data'].reshape((len(batch['data']), 3, 32, 32)).transpose(0, 2, 3, 1)
-	labels = batch['labels']
-			
-	return features, labels
+args = clip()
+data_flag = args.d
+if data_flag == 'local':
+	train_dataset, test_dataset, num_train_examples = get_cfar10_local(N_CLASSES)
+else:
+	train_dataset, test_dataset, num_train_examples = get_cfar10_gcp(N_CLASSES)
 
-def load_cfar10_batch_gcp(batch_id, bucket):
-	blob = bucket.get_blob('cifar-10-batches-py' + '/data_batch_' + str(batch_id))
-	blob.download_to_filename('/tmp/batch_'+str(batch_id))
-	with open('/tmp/batch_' + str(batch_id), mode = 'rb') as file:
-		batch = pickle.load(file, encoding = 'latin1')
-	features = batch['data'].reshape((len(batch['data']), 3, 32, 32)).transpose(0, 2, 3, 1)
-	labels = batch['labels']
-	return features, labels
-
-def one_hot_encode(x):
-	encoded = np.zeros((len(x), N_CLASSES))
-	for idx, val in enumerate(x):
-		encoded[idx][val] = 1
-	return encoded
-
-def get_cfar10_gcp():
-	train_features = None
-	train_labels = None
-	client = storage.Client()
-	bucket = client.get_bucket('cs231n-sp2020')
-	for batch_i in range(1, 6):
-		features, labels = load_cfar10_batch_gcp(batch_i, bucket)
-		encoded_labels = one_hot_encode(labels)
-		if batch_i == 1:
-			train_features = features 
-			train_labels = encoded_labels
-		else:
-			train_features = np.concatenate((train_features, features), axis = 0)
-			train_labels = np.concatenate((train_labels, encoded_labels), axis = 0)
-	print(train_features.shape)
-	print(train_labels.shape)
-	num_train_examples = train_features.shape[0]
-
-	test_features, test_labels = None, None
-	source_blob_name = 'cifar-10-batches-py/test_batch'
-	destination_file_name = '/tmp/test_batch'
-	blob = bucket.get_blob(source_blob_name)
-	blob.download_to_filename(destination_file_name)
-	print("Blob {} downloaded to {}.".format(source_blob_name, destination_file_name))
-	with open(destination_file_name, mode='rb') as file:
-		batch = pickle.load(file, encoding='latin1')
-		# preprocess the testing data
-		test_features = batch['data'].reshape((len(batch['data']), 3, 32, 32)).transpose(0, 2, 3, 1)
-		test_labels = batch['labels']
-		test_labels = one_hot_encode(test_labels)
-
-	train_dataset = tf.data.Dataset.from_tensor_slices((train_features, train_labels))
-	test_dataset = tf.data.Dataset.from_tensor_slices((test_features, test_labels))
-	return train_dataset, test_dataset, num_train_examples
-
-def get_cfar10_local():
-	train_features = None
-	train_labels = None
-	for batch_i in range(1, 6):
-		features, labels = load_cfar10_batch(batch_i)
-		encoded_labels = one_hot_encode(labels)
-		if batch_i == 1:
-			train_features = features 
-			train_labels = encoded_labels
-		else:
-			train_features = np.concatenate((train_features, features), axis = 0)
-			train_labels = np.concatenate((train_labels, encoded_labels), axis = 0)
-	print(train_features.shape)
-	print(train_labels.shape)
-	num_train_examples = train_features.shape[0]
-
-	test_features, test_labels = None, None
-	with open('../cifar-10-batches-py' + '/test_batch', mode='rb') as file:
-		batch = pickle.load(file, encoding='latin1')
-
-		# preprocess the testing data
-		test_features = batch['data'].reshape((len(batch['data']), 3, 32, 32)).transpose(0, 2, 3, 1)
-		test_labels = batch['labels']
-		test_labels = one_hot_encode(test_labels)
-
-	train_dataset = tf.data.Dataset.from_tensor_slices((train_features, train_labels))
-	test_dataset = tf.data.Dataset.from_tensor_slices((test_features, test_labels))
-	return train_dataset, test_dataset, num_train_examples
-
-train_dataset, test_dataset, num_train_examples = get_cfar10_gcp()
-
-# Image Normalization, Resizing, and Augmentation
-# modified from https://www.tensorflow.org/tutorials/images/data_augmentation
-def convert(image, label):
-	image = tf.image.resize(image, size = [IMG_SIZE, IMG_SIZE])
-	image = tf.image.convert_image_dtype(image, tf.float32) # Cast and normalize the image to [0,1]
-	return image, label
-
-def augment(image,label):
-	image,label = convert(image, label)
-	image = tf.image.random_flip_left_right(image)
-	image = tf.image.resize_with_crop_or_pad(image, IMG_SIZE + 16, IMG_SIZE + 16) # Add 16 pixels of padding
-	image = tf.image.random_crop(image, size=[IMG_SIZE, IMG_SIZE, 3]) # Random crop back to 224x224
-	image = tf.image.random_brightness(image, max_delta=0.25) # Random brightness
-	return image,label
-
-# Generate batches at tf.data.Dataset objects
+# Generate batches at tf.data.Dataset objects, applying augmentation to training set
+# normalization/resizing applied to both training and validation sets
 augmented_train_batches = (
-		train_dataset
-		.take(NUM_EXAMPLES) # change to -1 to get full dataset for actual training
-		.cache()
-		.shuffle(num_train_examples//4)
-		.map(augment, num_parallel_calls=AUTOTUNE)
-		.batch(BATCH_SIZE)
-		.prefetch(AUTOTUNE)
+	train_dataset
+	.take(NUM_EXAMPLES) # change to -1 to get full dataset for actual training
+	.cache()
+	.shuffle(num_train_examples//4)
+	.map(augment, num_parallel_calls=AUTOTUNE)
+	.batch(BATCH_SIZE)
+	.prefetch(AUTOTUNE)
 )
 
 validation_batches = (
-		test_dataset
-		.take(NUM_EXAMPLES) # change to -1 to get full dataset for actual training
-		.map(convert, num_parallel_calls=AUTOTUNE)
-		.batch(BATCH_SIZE)
+	test_dataset
+	.take(NUM_EXAMPLES) # change to -1 to get full dataset for actual training
+	.map(convert, num_parallel_calls=AUTOTUNE)
+	.batch(BATCH_SIZE)
 )
 
 # Define and load model
@@ -192,7 +104,6 @@ if not os.path.exists(plot_folder):
 checkpoint = ModelCheckpoint(filepath = os.path.join(model_folder, 'model.hdf5'), save_best_only = True,
 							monitor = 'val_accuracy', save_weights_only = False, verbose = 0)
 early_stop = EarlyStopping(monitor = 'val_accuracy', patience = 10)
-#tb = TensorBoard(log_dir = LOG_DIR, batch_size = BATCH_SIZE)
 
 # Compile & train model
 model = get_model()
