@@ -12,7 +12,7 @@ AUTOTUNE = tf.data.experimental.AUTOTUNE
 N_CLASSES = 10 # 101 for UCF
 
 def clip():
-	parser = argparse.ArgumentParser(description = 'Specify training details')
+	parser = argparse.ArgumentParser(description = 'Specify evaluation details')
 	parser.add_argument('-d', required = True, choices = ['local', 'gcp'], 
 		help = 'local for local data storage, gcp for cloud data storage')
 	parser.add_argument('-b', required = True, type = int, help = 'batch size (number of frames per video)')
