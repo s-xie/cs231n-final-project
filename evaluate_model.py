@@ -78,7 +78,9 @@ def evaluate_model(model, dataset, num_examples, batch_size, mode, model_path):
 	print('Top 5 Accuracy (Average Voting Scheme):', avg_acc_top5)
 
 	model_folder = os.path.dirname(model_path)
-	eval_file = os.path.join(model_folder, 'eval.txt')
+	model_filename = os.path.basename(model_path)
+	eval_filename = model_filename[:model_filename.index('.hdf5')] + '_eval.txt'
+	eval_file = os.path.join(model_folder, eval_filename)
 	with open(eval_file, mode = 'a+') as out_file:
 		if mode == 'train':
 			out_file.write('Training Set Results:\n')
