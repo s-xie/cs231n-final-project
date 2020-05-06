@@ -31,7 +31,6 @@ def clip():
 	parser.add_argument('-d', required = True, choices = ['local', 'gcp'], 
 		help = 'local for local data storage, gcp for cloud data storage')
 	args = parser.parse_args()
-	print(args)
 	return args
 
 # Load Training & Validation Data

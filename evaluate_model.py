@@ -30,7 +30,7 @@ if data_flag == 'local':
 else:
 	train_dataset, test_dataset, num_train_examples, num_test_examples = get_cfar10_gcp(N_CLASSES)
 
-model = load_model(filepath = args.m, compile = True)
+model = load_model(filepath = args.m, compile = False)
 print('Model Loaded!')
 
 batch_size = args.b
