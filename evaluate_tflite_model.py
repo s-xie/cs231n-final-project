@@ -4,6 +4,8 @@ import argparse
 import numpy as np 
 from tqdm import tqdm
 from scipy import stats
+from sklearn.metrics import accuracy_score
+import os
 from utils import *
 AUTOTUNE = tf.data.experimental.AUTOTUNE
 
