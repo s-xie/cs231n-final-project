@@ -84,7 +84,9 @@ q_aware_model.compile(optimizer = adam, loss = 'categorical_crossentropy',
 
 # Define callbacks
 model_folder = os.path.dirname(model_path)
-checkpoint = ModelCheckpoint(filepath = os.path.join(model_folder, 'model_quant.hdf5'), save_best_only = True,
+model_filename = os.path.basename(model_path)
+output_filename = model_filename[:model_filename.index('.hdf5')] + '_quant.hdf5'
+checkpoint = ModelCheckpoint(filepath = os.path.join(model_folder, output_filename), save_best_only = True,
 							monitor = 'val_accuracy', save_weights_only = False, verbose = 0)
 early_stop = EarlyStopping(monitor = 'val_accuracy', patience = 20)
 
