@@ -22,7 +22,7 @@ IMG_SIZE = 224
 IMG_SHAPE = (IMG_SIZE, IMG_SIZE, 3)
 BATCH_SIZE = 25
 NUM_EXAMPLES = 100 # Remove for actual training
-N_CLASSES = 10 # 101 for actual training
+N_CLASSES = 101
 N_LAYERS_TO_FREEZE = 17 # freeze everything before the last conv layer
 lr = 1e-4
 
@@ -37,7 +37,7 @@ def clip():
 args = clip()
 data_flag = args.d
 if data_flag == 'local':
-	train_dataset, test_dataset, num_train_examples, num_test_examples = get_cfar10_local(N_CLASSES)
+	train_dataset, test_dataset, num_train_examples, num_test_examples = get_ucf101_local(N_CLASSES)
 else:
 	train_dataset, test_dataset, num_train_examples, num_test_examples = get_cfar10_gcp(N_CLASSES)
 

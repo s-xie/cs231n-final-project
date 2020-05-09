@@ -10,7 +10,7 @@ IMG_SIZE = 224
 # modified from https://www.tensorflow.org/tutorials/images/data_augmentation
 # Normalize and resize images
 def convert(image, label):
-	image = tf.image.resize(image, size = [IMG_SIZE, IMG_SIZE])
+	#image = tf.image.resize(image, size = [IMG_SIZE, IMG_SIZE])
 	image = tf.image.convert_image_dtype(image, tf.float32) # Cast and normalize the image to [0,1]
 	return image, label
 
@@ -57,15 +57,63 @@ def download_blob(bucket, source_blob_name, destination_file_name):
 	blob = bucket.blob(source_blob_name)
 	blob.download_to_filename(destination_file_name)
 
+def get_ucf101_local(num_classes):
+	data_dir = 'data/'
+	num_train_files = 2
+	num_dev_files = 1
+
+	X_train, y_train = None, None
+	print('Loading training files (' + str(num_train_files) + ' batch(es)) ...')
+	for i in range(1, num_train_files + 1):
+		with open(data_dir + 'X_train_' + str(i) + '.npy', mode = 'rb') as file:
+			batch = np.load(file, allow_pickle = True)
+		with open(data_dir + 'y_train_' + str(i) + '.npy', mode = 'rb') as file:
+			y = np.load(file, allow_pickle = True)
+			y = one_hot_encode(y, num_classes)
+		if i == 1:
+			X_train = batch
+			y_train = y
+		else:
+			X_train = np.concatenate((X_train, batch), axis = 0)
+			y_train = np.concatenate((y_train, y), axis = 0)
+		print('Loaded training batch ' + str(i))
+	print('Shape of X_train:', X_train.shape)
+	print('Shape of y_train:', y_train.shape)
+
+	X_dev, y_dev = None, None
+	print('Loading dev files (' + str(num_dev_files) + ' batch(es)) ...')
+	for i in range(1, num_dev_files + 1):
+			with open(data_dir + 'X_dev_' + str(i) + '.npy', mode = 'rb') as file:
+				batch = np.load(file, allow_pickle = True)
+			with open(data_dir + 'y_dev_' + str(i) + '.npy', mode = 'rb') as file:
+				y = np.load(file, allow_pickle = True)
+				y = one_hot_encode(y, num_classes)
+			if i == 1:
+				X_dev = batch
+				y_dev = y
+			else:
+				X_dev = np.concatenate((X_dev, batch), axis = 0)
+				y_dev = np.concatenate((y_dev, y), axis = 0)
+			print('Loaded dev batch ' + str(i))
+	print('Shape of X_dev:', X_dev.shape)
+	print('Shape of y_dev:', y_dev.shape)
+
+	num_train_examples = X_train.shape[0]
+	num_dev_examples = X_dev.shape[0]
+	train_dataset = tf.data.Dataset.from_tensor_slices((X_train, y_train))
+	print('Generated training tf.data.dataset')
+	dev_dataset = tf.data.Dataset.from_tensor_slices((X_dev, y_dev))
+	print('Generated dev training tf.data.dataset')
+	return train_dataset, dev_dataset, num_train_examples, num_dev_examples
 
 # -------------------------------------- CIFAR 10: will be removed soon ---------------------------------------
 # Load training batch file for CIFAR 10 from local machine
-def load_cfar10_batch(batch_id):
-	with open('../cifar-10-batches-py' + '/data_batch_' + str(batch_id), mode='rb') as file:
-		batch = pickle.load(file, encoding='latin1')			
-	features = batch['data'].reshape((len(batch['data']), 3, 32, 32)).transpose(0, 2, 3, 1)
-	labels = batch['labels']
-	return features, labels
+# def load_cfar10_batch(batch_id):
+# 	with open('../cifar-10-batches-py' + '/data_batch_' + str(batch_id), mode='rb') as file:
+# 		batch = pickle.load(file, encoding='latin1')			
+# 	features = batch['data'].reshape((len(batch['data']), 3, 32, 32)).transpose(0, 2, 3, 1)
+# 	labels = batch['labels']
+# 	return features, labels
 
 # Load training batch file for CIFAR 10 from GCP bucket
 def load_cfar10_batch_gcp(batch_id, bucket):
@@ -113,34 +161,32 @@ def get_cfar10_gcp(num_classes):
 	return train_dataset, test_dataset, num_train_examples, num_test_examples
 
 # Load training and validation datasets for CIFAR 10 from local machine
-def get_cfar10_local(num_classes):
-	train_features = None
-	train_labels = None
-	for batch_i in range(1, 6):
-		features, labels = load_cfar10_batch(batch_i)
-		encoded_labels = one_hot_encode(labels, num_classes)
-		if batch_i == 1:
-			train_features = features 
-			train_labels = encoded_labels
-		else:
-			train_features = np.concatenate((train_features, features), axis = 0)
-			train_labels = np.concatenate((train_labels, encoded_labels), axis = 0)
-	print(train_features.shape)
-	print(train_labels.shape)
-	num_train_examples = train_features.shape[0]
+# def get_cfar10_local(num_classes):
+# 	train_features = None
+# 	train_labels = None
+# 	for batch_i in range(1, 6):
+# 		features, labels = load_cfar10_batch(batch_i)
+# 		encoded_labels = one_hot_encode(labels, num_classes)
+# 		if batch_i == 1:
+# 			train_features = features 
+# 			train_labels = encoded_labels
+# 		else:
+# 			train_features = np.concatenate((train_features, features), axis = 0)
+# 			train_labels = np.concatenate((train_labels, encoded_labels), axis = 0)
+# 	print(train_features.shape)
+# 	print(train_labels.shape)
+# 	num_train_examples = train_features.shape[0]
 
-	test_features, test_labels = None, None
-	with open('../cifar-10-batches-py' + '/test_batch', mode='rb') as file:
-		batch = pickle.load(file, encoding='latin1')
+# 	test_features, test_labels = None, None
+# 	with open('../cifar-10-batches-py' + '/test_batch', mode='rb') as file:
+# 		batch = pickle.load(file, encoding='latin1')
 
-		# preprocess the testing data
-		test_features = batch['data'].reshape((len(batch['data']), 3, 32, 32)).transpose(0, 2, 3, 1)
-		test_labels = batch['labels']
-		test_labels = one_hot_encode(test_labels, num_classes)
+# 		# preprocess the testing data
+# 		test_features = batch['data'].reshape((len(batch['data']), 3, 32, 32)).transpose(0, 2, 3, 1)
+# 		test_labels = batch['labels']
+# 		test_labels = one_hot_encode(test_labels, num_classes)
 
-	num_test_examples = test_features.shape[0]
-	train_dataset = tf.data.Dataset.from_tensor_slices((train_features, train_labels))
-	test_dataset = tf.data.Dataset.from_tensor_slices((test_features, test_labels))
-	return train_dataset, test_dataset, num_train_examples, num_test_examples
-
-
+# 	num_test_examples = test_features.shape[0]
+# 	train_dataset = tf.data.Dataset.from_tensor_slices((train_features, train_labels))
+# 	test_dataset = tf.data.Dataset.from_tensor_slices((test_features, test_labels))
+# 	return train_dataset, test_dataset, num_train_examples, num_test_examples
