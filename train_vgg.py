@@ -28,7 +28,7 @@ lr = 1e-4
 
 def clip():
 	parser = argparse.ArgumentParser(description = 'Specify training details')
-	parser.add_argument('-d', required = True, choices = ['local', 'gcp'], 
+	parser.add_argument('-d', required = True, choices = ['local', 'gcp-small', 'gcp-large'], 
 		help = 'local for local data storage, gcp for cloud data storage')
 	args = parser.parse_args()
 	return args
@@ -39,7 +39,7 @@ data_flag = args.d
 if data_flag == 'local':
 	train_dataset, test_dataset, num_train_examples, num_test_examples = get_ucf101_local(N_CLASSES)
 else:
-	train_dataset, test_dataset, num_train_examples, num_test_examples = get_cfar10_gcp(N_CLASSES)
+	train_dataset, test_dataset, num_train_examples, num_test_examples = get_ucf101_gcp(N_CLASSES, data_flag)
 
 # Generate batches at tf.data.Dataset objects, applying augmentation to training set
 # normalization/resizing applied to both training and validation sets
