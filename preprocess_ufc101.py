@@ -23,6 +23,7 @@ RAW_DATA_DIR = "ucf101-raw/"
 OUTPUT_DATA_DIR = "data/"
 TRAIN_SPLIT = "ucfTrainTestlist/trainlist01.txt"
 DEV_SPLIT = "ucfTrainTestlist/testlist01.txt"
+IMG_SIZE = 224
 
 args = clip()
 classes = set()
@@ -35,7 +36,6 @@ for f_name in glob.glob(RAW_DATA_DIR+"*"):
 classes = sorted(list(classes))
 for i, c in enumerate(classes):
     class_dict[c] = i  
-print(class_dict)
 
 train_files = set()
 dev_files = set()
@@ -52,48 +52,79 @@ with open(DEV_SPLIT, 'r') as f:
         p = p[p.index('/')+1:]
         dev_files.add(p)
 
-print(dev_files)
-count = 0
 train_file_num = 1
 dev_file_num = 1
+train_files_sampled = 0
+dev_files_sampled = 0
 X_train, y_train, X_dev, y_dev = [], [], [], []
 for f_name in tqdm(glob.glob(RAW_DATA_DIR+"*")):
-    count += 1
     vid_name = f_name[f_name.index('/')+1:]
     vidcap = cv2.VideoCapture(f_name)
     num_frames = int(vidcap.get(cv2.CAP_PROP_FRAME_COUNT))
-    sample_rate = num_frames//(args.f - 1)
+    frame_indices = list(np.random.choice(range(num_frames), size = args.f, replace = False))
     count = 0
+    num_sampled = 0
     success, image = vidcap.read()
+    sampled_X = []
+    sampled_y = []
     while success:
-        if count % sample_rate == 0:
+        image = cv2.resize(image,(IMG_SIZE,IMG_SIZE))
+        if count in frame_indices:
             if vid_name in train_files:
-                X_train.append(np.array(image))
-                y_train.append(class_dict[get_class_label(f_name)])
+                sampled_X.append(np.array(image))
+                sampled_y.append(class_dict[get_class_label(f_name)])
+                num_sampled += 1
             elif vid_name in dev_files:
-                X_dev.append(np.array(image))
-                y_dev.append(class_dict[get_class_label(f_name)])
-            if len(X_train) == 25000:
-                np.save(OUTPUT_DATA_DIR + "X_train_" + str(train_file_num), X_train)
-                np.save(OUTPUT_DATA_DIR + "y_train_" + str(train_file_num), y_train)
-                print('Saved training batch', train_file_num)
-                train_file_num += 1
-                del X_train[:]
-                del y_train[:]
-                X_train, y_train = [], []
-            if len(X_dev) == 25000:
-                np.save(OUTPUT_DATA_DIR + "X_dev_" + str(dev_file_num), X_dev)
-                np.save(OUTPUT_DATA_DIR + "y_dev_" + str(dev_file_num), y_dev)
-                print('Saved dev batch', dev_file_num)
-                dev_file_num += 1
-                del X_dev[:]
-                del y_dev[:]
-                X_dev, y_dev = [], []
+                sampled_X.append(np.array(image))
+                sampled_y.append(class_dict[get_class_label(f_name)])
+                num_sampled += 1
+            if len(sampled_X) == args.f:
+                if vid_name in train_files:
+                    X_train += sampled_X
+                    y_train += sampled_y
+                    train_files_sampled += 1
+                elif vid_name in dev_files:
+                    X_dev += sampled_X
+                    y_dev += sampled_y
+                    dev_files_sampled += 1
+
+                if len(X_train) == 25000:
+                    X_train = np.asarray(X_train)
+                    y_train = np.asarray(y_train)
+                    print('X_train shape:', str(X_train.shape))
+                    print('y_train shape:', str(y_train.shape))
+                    np.save(OUTPUT_DATA_DIR + "X_train_" + str(train_file_num), X_train, allow_pickle = True)
+                    np.save(OUTPUT_DATA_DIR + "y_train_" + str(train_file_num), y_train, allow_pickle = True)
+                    print('Saved training batch', train_file_num)
+                    train_file_num += 1
+                    del X_train
+                    del y_train
+                    X_train, y_train = [], []
+                if len(X_dev) == 25000:
+                    X_dev = np.asarray(X_dev)
+                    y_dev = np.asarray(y_dev)
+                    print('X_dev shape:', str(X_dev.shape))
+                    print('y_dev shape:', str(y_dev.shape))
+                    np.save(OUTPUT_DATA_DIR + "X_dev_" + str(dev_file_num), X_dev, allow_pickle = True)
+                    np.save(OUTPUT_DATA_DIR + "y_dev_" + str(dev_file_num), y_dev, allow_pickle = True)
+                    print('Saved dev batch', dev_file_num)
+                    dev_file_num += 1
+                    del X_dev
+                    del y_dev
+                    X_dev, y_dev = [], []
         success, image = vidcap.read()
         count += 1
-np.save(OUTPUT_DATA_DIR + "X_train_" + str(train_file_num), X_train)
-np.save(OUTPUT_DATA_DIR + "y_train_" + str(train_file_num), y_train)
-np.save(OUTPUT_DATA_DIR + "X_dev_" + str(dev_file_num), X_dev)
-np.save(OUTPUT_DATA_DIR + "y_dev_" + str(dev_file_num), y_dev)
-
-
+print('Num train files sampled:', train_files_sampled)
+print('Num dev files sampled:', dev_files_sampled)
+X_train = np.asarray(X_train)
+y_train = np.asarray(y_train)
+X_dev = np.asarray(X_dev)
+y_dev = np.asarray(y_dev)
+print('X_train shape:', str(X_train.shape))
+print('y_train shape:', str(y_train.shape))
+print('X_dev shape:', str(X_dev.shape))
+print('y_dev shape:', str(y_dev.shape))
+np.save(OUTPUT_DATA_DIR + "X_train_" + str(train_file_num), X_train, allow_pickle = True)
+np.save(OUTPUT_DATA_DIR + "y_train_" + str(train_file_num), y_train, allow_pickle = True)
+np.save(OUTPUT_DATA_DIR + "X_dev_" + str(dev_file_num), X_dev, allow_pickle = True)
+np.save(OUTPUT_DATA_DIR + "y_dev_" + str(dev_file_num), y_dev, allow_pickle = True)
