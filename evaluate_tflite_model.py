@@ -9,7 +9,7 @@ import os
 from utils import *
 AUTOTUNE = tf.data.experimental.AUTOTUNE
 
-N_CLASSES = 10 # 101 for UCF
+N_CLASSES = 101
 
 def clip():
 	parser = argparse.ArgumentParser(description = 'Specify TFLite evaluation details')
@@ -26,7 +26,7 @@ def clip():
 args = clip()
 data_flag = args.d
 if data_flag == 'local':
-	train_dataset, test_dataset, num_train_examples, num_test_examples = get_cfar10_local(N_CLASSES)
+	train_dataset, test_dataset, num_train_examples, num_test_examples = get_ucf101_local(N_CLASSES)
 else:
 	train_dataset, test_dataset, num_train_examples, num_test_examples = get_cfar10_gcp(N_CLASSES)
 

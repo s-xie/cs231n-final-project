@@ -1,5 +1,5 @@
-# ref: https://www.tensorflow.org/model_optimization/guide/pruning/pruning_with_keras
 # NOTE: REQUIRES TENSORFLOW-NIGHTLY!
+# ref: https://www.tensorflow.org/model_optimization/guide/pruning/pruning_with_keras
 # Imports
 import argparse 
 import tensorflow as tf
@@ -19,7 +19,7 @@ IMG_SIZE = 224
 IMG_SHAPE = (IMG_SIZE, IMG_SIZE, 3)
 BATCH_SIZE = 25
 NUM_EXAMPLES = 100 # Remove for actual training
-N_CLASSES = 10 # 101 for actual training
+N_CLASSES = 101
 N_LAYERS_TO_FREEZE = 17 # freeze everything before the last conv layer
 lr = 1e-4
 EPOCHS = 5
@@ -44,7 +44,7 @@ def freeze_layers(model):
 args = clip()
 data_flag = args.d
 if data_flag == 'local':
-	train_dataset, test_dataset, num_train_examples, num_test_examples = get_cfar10_local(N_CLASSES)
+	train_dataset, test_dataset, num_train_examples, num_test_examples = get_ucf101_local(N_CLASSES)
 else:
 	train_dataset, test_dataset, num_train_examples, num_test_examples = get_cfar10_gcp(N_CLASSES)
 
@@ -77,7 +77,7 @@ def apply_pruning_to_dense(layer):
   pruning_params = {
       'pruning_schedule': sparsity.PolynomialDecay(initial_sparsity=0.50,
                                                    final_sparsity=0.90,
-                                                   begin_step=2000,
+                                                   begin_step=0,
                                                    end_step=end_step,
                                                    frequency=100)
   }
@@ -101,9 +101,11 @@ checkpoint = ModelCheckpoint(filepath = os.path.join(model_folder, output_filena
 							monitor = 'val_accuracy', save_weights_only = False, verbose = 0)
 early_stop = EarlyStopping(monitor = 'val_accuracy', patience = 20)
 pruning_step = sparsity.UpdatePruningStep()
-logdir = tempfile.mkdtemp()
-print('Writing training logs to ' + logdir)
-pruning_summary = sparsity.PruningSummaries(log_dir=logdir, profile_batch=0)
+log_folder = os.path.join(model_folder, 'logs/')
+if not os.path.exists(log_folder):
+	os.mkdir(log_folder)
+print('Writing training logs to ' + log_folder)
+pruning_summary = sparsity.PruningSummaries(log_dir=log_folder, profile_batch=0)
 
 # Fine-tune model
 model_history = model.fit(augmented_train_batches, epochs = 5, validation_data = validation_batches, callbacks = [checkpoint, early_stop, pruning_step, pruning_summary])

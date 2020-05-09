@@ -103,7 +103,7 @@ def get_ucf101_local(num_classes):
 	train_dataset = tf.data.Dataset.from_tensor_slices((X_train, y_train))
 	print('Generated training tf.data.dataset')
 	dev_dataset = tf.data.Dataset.from_tensor_slices((X_dev, y_dev))
-	print('Generated dev training tf.data.dataset')
+	print('Generated dev tf.data.dataset')
 	return train_dataset, dev_dataset, num_train_examples, num_dev_examples
 
 # -------------------------------------- CIFAR 10: will be removed soon ---------------------------------------
