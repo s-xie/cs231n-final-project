@@ -82,7 +82,7 @@ q_aware_model = tf.keras.models.clone_model(
 )
 adam = optimizers.Adam(learning_rate = lr, beta_1 = 0.9, beta_2 = 0.99, epsilon = None, decay = 1e-5, amsgrad = False)
 q_aware_model.compile(optimizer = adam, loss = 'categorical_crossentropy', 
-						metrics = [Accuracy(), TopKCategoricalAccuracy(k = 3, name = 'top3_accuracy'), TopKCategoricalAccuracy(k = 5, name = 'top5_accuracy')])
+						metrics = [TopKCategoricalAccuracy(k=1, name = 'accuracy'), TopKCategoricalAccuracy(k = 3, name = 'top3_accuracy'), TopKCategoricalAccuracy(k = 5, name = 'top5_accuracy')])
 
 # Define callbacks
 model_folder = os.path.dirname(model_path)
