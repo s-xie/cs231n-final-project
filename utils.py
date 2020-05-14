@@ -2,7 +2,7 @@ import pickle
 import numpy as np
 import tensorflow as tf
 from google.cloud import storage
-from smart_open import smart_open
+import smart_open
 
 # Constants
 IMG_SIZE = 224
@@ -117,7 +117,7 @@ def get_ucf101_aws(num_classes, mode):
 		num_train_files = 8
 		num_dev_files = 4
 		data_dir = 'ucf101-large/'
-		s3_prefix = 's3://cs231n-bucket/ucf101-small/'
+		s3_prefix = 's3://cs231n-bucket/ucf101-large/'
 
 	X_train, y_train = None, None
 	print('Loading training files (' + str(num_train_files) + ' batch(es)) ...') 
@@ -126,13 +126,13 @@ def get_ucf101_aws(num_classes, mode):
 		#source_blob_name = data_dir + 'X_train_' + str(i) + '.npy'
 		#destination_file_name = '/tmp/X_train_' + str(i) + '.npy'
 		#download_blob(bucket, source_blob_name, destination_file_name)
-		with smart_open(s3_prefix + 'X_train_' + str(i) + '.npy', mode = 'rb') as file:
+		with smart_open.open(s3_prefix + 'X_train_' + str(i) + '.npy', mode = 'rb') as file:
 			batch = np.load(file, allow_pickle = True)
 		# Get y_train_i
 		#source_blob_name = data_dir + 'y_train_' + str(i) + '.npy'
 		#destination_file_name = '/tmp/y_train_' + str(i) + '.npy'
 		#download_blob(bucket, source_blob_name, destination_file_name)
-		with open(s3_prefix + 'y_train_' + str(i) + '.npy', mode = 'rb') as file:
+		with smart_open.open(s3_prefix + 'y_train_' + str(i) + '.npy', mode = 'rb') as file:
 			y = np.load(file, allow_pickle = True)
 			y = one_hot_encode(y, num_classes)
 		if i == 1:
@@ -152,13 +152,13 @@ def get_ucf101_aws(num_classes, mode):
 		#source_blob_name = data_dir + 'X_dev_' + str(i) + '.npy'
 		#destination_file_name = '/tmp/X_dev_' + str(i) + '.npy'
 		#download_blob(bucket, source_blob_name, destination_file_name)
-		with open(s3_prefix + 'X_dev_' + str(i) + '.npy', mode = 'rb') as file:
+		with smart_open.open(s3_prefix + 'X_dev_' + str(i) + '.npy', mode = 'rb') as file:
 			batch = np.load(file, allow_pickle = True)
 		# Get y_dev_i
 		#source_blob_name = data_dir + 'y_dev_' + str(i) + '.npy'
 		#destination_file_name = '/tmp/y_dev_' + str(i) + '.npy'
 		#download_blob(bucket, source_blob_name, destination_file_name)
-		with open(s3_prefix + 'y_dev_' + str(i) + '.npy', mode = 'rb') as file:
+		with smart_open.open(s3_prefix + 'y_dev_' + str(i) + '.npy', mode = 'rb') as file:
 			y = np.load(file, allow_pickle = True)
 			y = one_hot_encode(y, num_classes)
 		if i == 1:
