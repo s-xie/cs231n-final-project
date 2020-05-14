@@ -96,6 +96,7 @@ def evaluate_model(model, dataset, num_examples, batch_size, mode, model_path):
 if args.test:
 	validation_batches = (
 		test_dataset
+		.take(-1)
 		.cache()
 		.map(convert, num_parallel_calls=AUTOTUNE)
 		.batch(batch_size)
@@ -105,6 +106,7 @@ if args.test:
 if args.train:
 	train_batches = (
 		train_dataset
+		.take(-1)
 		.cache()
 		.map(convert, num_parallel_calls=AUTOTUNE)
 		.batch(batch_size)
