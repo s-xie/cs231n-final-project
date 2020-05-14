@@ -2,6 +2,7 @@ import pickle
 import numpy as np
 import tensorflow as tf
 from google.cloud import storage
+from smart_open import smart_open
 
 # Constants
 IMG_SIZE = 224
@@ -95,6 +96,78 @@ def get_ucf101_local(num_classes):
 				X_dev = np.concatenate((X_dev, batch), axis = 0)
 				y_dev = np.concatenate((y_dev, y), axis = 0)
 			print('Loaded dev batch ' + str(i))
+	print('Shape of X_dev:', X_dev.shape)
+	print('Shape of y_dev:', y_dev.shape)
+
+	num_train_examples = X_train.shape[0]
+	num_dev_examples = X_dev.shape[0]
+	train_dataset = tf.data.Dataset.from_tensor_slices((X_train, y_train))
+	print('Generated training tf.data.dataset')
+	dev_dataset = tf.data.Dataset.from_tensor_slices((X_dev, y_dev))
+	print('Generated dev tf.data.dataset')
+	return train_dataset, dev_dataset, num_train_examples, num_dev_examples
+
+def get_ucf101_aws(num_classes, mode):
+	if mode == 'aws-small':
+		num_train_files = 2
+		num_dev_files = 1
+		data_dir = 'ucf101-small/'
+		s3_prefix = 's3://cs231n-bucket/ucf101-small/'
+	else:
+		num_train_files = 8
+		num_dev_files = 4
+		data_dir = 'ucf101-large/'
+		s3_prefix = 's3://cs231n-bucket/ucf101-small/'
+
+	X_train, y_train = None, None
+	print('Loading training files (' + str(num_train_files) + ' batch(es)) ...') 
+	for i in range(1, num_train_files + 1):
+		# Get X_train_i
+		#source_blob_name = data_dir + 'X_train_' + str(i) + '.npy'
+		#destination_file_name = '/tmp/X_train_' + str(i) + '.npy'
+		#download_blob(bucket, source_blob_name, destination_file_name)
+		with smart_open(s3_prefix + 'X_train_' + str(i) + '.npy', mode = 'rb') as file:
+			batch = np.load(file, allow_pickle = True)
+		# Get y_train_i
+		#source_blob_name = data_dir + 'y_train_' + str(i) + '.npy'
+		#destination_file_name = '/tmp/y_train_' + str(i) + '.npy'
+		#download_blob(bucket, source_blob_name, destination_file_name)
+		with open(s3_prefix + 'y_train_' + str(i) + '.npy', mode = 'rb') as file:
+			y = np.load(file, allow_pickle = True)
+			y = one_hot_encode(y, num_classes)
+		if i == 1:
+			X_train = batch
+			y_train = y
+		else:
+			X_train = np.concatenate((X_train, batch), axis = 0)
+			y_train = np.concatenate((y_train, y), axis = 0)
+		print('Loaded training batch ' + str(i))
+	print('Shape of X_train:', X_train.shape)
+	print('Shape of y_train:', y_train.shape)
+
+	X_dev, y_dev = None, None
+	print('Loading dev files (' + str(num_dev_files) + ' batch(es)) ...')
+	for i in range(1, num_dev_files + 1):
+		# Get X_dev_i
+		#source_blob_name = data_dir + 'X_dev_' + str(i) + '.npy'
+		#destination_file_name = '/tmp/X_dev_' + str(i) + '.npy'
+		#download_blob(bucket, source_blob_name, destination_file_name)
+		with open(s3_prefix + 'X_dev_' + str(i) + '.npy', mode = 'rb') as file:
+			batch = np.load(file, allow_pickle = True)
+		# Get y_dev_i
+		#source_blob_name = data_dir + 'y_dev_' + str(i) + '.npy'
+		#destination_file_name = '/tmp/y_dev_' + str(i) + '.npy'
+		#download_blob(bucket, source_blob_name, destination_file_name)
+		with open(s3_prefix + 'y_dev_' + str(i) + '.npy', mode = 'rb') as file:
+			y = np.load(file, allow_pickle = True)
+			y = one_hot_encode(y, num_classes)
+		if i == 1:
+			X_dev = batch
+			y_dev = y
+		else:
+			X_dev = np.concatenate((X_dev, batch), axis = 0)
+			y_dev = np.concatenate((y_dev, y), axis = 0)
+		print('Loaded dev batch ' + str(i))
 	print('Shape of X_dev:', X_dev.shape)
 	print('Shape of y_dev:', y_dev.shape)
 

@@ -28,7 +28,7 @@ lr = 1e-4
 
 def clip():
 	parser = argparse.ArgumentParser(description = 'Specify training details')
-	parser.add_argument('-d', required = True, choices = ['local', 'gcp-small', 'gcp-large'], 
+	parser.add_argument('-d', required = True, choices = ['local', 'gcp-small', 'gcp-large', 'aws-small', 'aws-large'], 
 		help = 'local for local data storage, gcp for cloud data storage')
 	args = parser.parse_args()
 	return args
@@ -38,7 +38,7 @@ args = clip()
 data_flag = args.d
 if data_flag == 'local':
 	train_dataset, test_dataset, num_train_examples, num_test_examples = get_ucf101_local(N_CLASSES)
-else:
+elif 'gcp' in data_flag:
 	train_dataset, test_dataset, num_train_examples, num_test_examples = get_ucf101_gcp(N_CLASSES, data_flag)
 
 # Generate batches at tf.data.Dataset objects, applying augmentation to training set
