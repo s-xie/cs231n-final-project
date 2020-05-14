@@ -16,12 +16,10 @@ import argparse
 AUTOTUNE = tf.data.experimental.AUTOTUNE
 
 # Constants & Parameters
-DATA_DIR = "" # to be added for UCF
 OUTPUT_DIR = "models/"
 IMG_SIZE = 224
 IMG_SHAPE = (IMG_SIZE, IMG_SIZE, 3)
-BATCH_SIZE = 25
-NUM_EXAMPLES = 100 # Remove for actual training
+BATCH_SIZE = 64
 N_CLASSES = 101
 N_LAYERS_TO_FREEZE = 17 # freeze everything before the last conv layer
 lr = 1e-4
@@ -47,7 +45,7 @@ else:
 # normalization/resizing applied to both training and validation sets
 augmented_train_batches = (
 	train_dataset
-	.take(NUM_EXAMPLES) # change to -1 to get full dataset for actual training
+        .take(-1)
 	.cache()
 	.shuffle(num_train_examples//4)
 	.map(augment, num_parallel_calls=AUTOTUNE)
@@ -57,7 +55,8 @@ augmented_train_batches = (
 
 validation_batches = (
 	test_dataset
-	.take(NUM_EXAMPLES) # change to -1 to get full dataset for actual training
+        .take(-1)
+        .cache()
 	.map(convert, num_parallel_calls=AUTOTUNE)
 	.batch(BATCH_SIZE)
 )
@@ -111,10 +110,10 @@ model = get_model()
 adam = optimizers.Adam(learning_rate = lr, beta_1 = 0.9, beta_2 = 0.99, epsilon = None, decay = 1e-5, amsgrad = False)
 model.compile(loss = 'categorical_crossentropy',
 							optimizer = adam,
-							metrics = [Accuracy(), TopKCategoricalAccuracy(k = 3, name = 'top3_accuracy'), TopKCategoricalAccuracy(k = 5, name = 'top5_accuracy')])
+							metrics = [TopKCategoricalAccuracy(k=1, name = 'accuracy'), TopKCategoricalAccuracy(k = 3, name = 'top3_accuracy'), TopKCategoricalAccuracy(k = 5, name = 'top5_accuracy')])
 print('Model compiled')
 
-model_history = model.fit(augmented_train_batches, epochs = 5, validation_data = validation_batches, callbacks = [checkpoint, early_stop])
+model_history = model.fit(augmented_train_batches, epochs = 20, validation_data = validation_batches, callbacks = [checkpoint, early_stop])
 
 # Save output
 np.save(os.path.join(model_folder, 'history.npy'), model_history.history)
