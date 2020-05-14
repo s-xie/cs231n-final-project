@@ -103,7 +103,7 @@ if not os.path.exists(plot_folder):
 # Define callbacks
 checkpoint = ModelCheckpoint(filepath = os.path.join(model_folder, 'model.hdf5'), save_best_only = True,
 							monitor = 'val_accuracy', save_weights_only = False, verbose = 0)
-early_stop = EarlyStopping(monitor = 'val_accuracy', patience = 10)
+early_stop = EarlyStopping(monitor = 'val_accuracy', patience = 5)
 
 # Compile & train model
 model = get_model()
