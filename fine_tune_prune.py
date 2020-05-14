@@ -18,7 +18,6 @@ AUTOTUNE = tf.data.experimental.AUTOTUNE
 IMG_SIZE = 224
 IMG_SHAPE = (IMG_SIZE, IMG_SIZE, 3)
 BATCH_SIZE = 25
-NUM_EXAMPLES = 100 # Remove for actual training
 N_CLASSES = 101
 N_LAYERS_TO_FREEZE = 17 # freeze everything before the last conv layer
 lr = 1e-4
@@ -54,7 +53,7 @@ else:
 # normalization/resizing applied to both training and validation sets
 augmented_train_batches = (
 	train_dataset
-	.take(NUM_EXAMPLES) # change to -1 to get full dataset for actual training
+	.take(-1)
 	.cache()
 	.shuffle(num_train_examples//4)
 	.map(augment, num_parallel_calls=AUTOTUNE)
@@ -64,7 +63,8 @@ augmented_train_batches = (
 
 validation_batches = (
 	test_dataset
-	.take(NUM_EXAMPLES) # change to -1 to get full dataset for actual training
+	.take(-1)
+	.cache()
 	.map(convert, num_parallel_calls=AUTOTUNE)
 	.batch(BATCH_SIZE)
 )

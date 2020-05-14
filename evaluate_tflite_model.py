@@ -113,6 +113,8 @@ def evaluate_tflite_model(model, dataset, num_examples, batch_size, mode, model_
 if args.test:
 	validation_batches = (
 		test_dataset
+		.take(-1)
+		.cache()
 		.map(convert, num_parallel_calls=AUTOTUNE)
 	)
 	evaluate_tflite_model(interpreter, validation_batches, num_test_examples, batch_size, 'test', args.m)
@@ -120,6 +122,8 @@ if args.test:
 if args.train:
 	train_batches = (
 		train_dataset
+		.take(-1)
+		.cache()
 		.map(convert, num_parallel_calls=AUTOTUNE)
 	)
 	evaluate_model(model, train_batches, num_train_examples, batch_size, 'train', args.m)
