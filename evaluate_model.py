@@ -13,8 +13,8 @@ N_CLASSES = 101
 
 def clip():
 	parser = argparse.ArgumentParser(description = 'Specify evaluation details')
-	parser.add_argument('-d', required = True, choices = ['local', 'gcp'], 
-		help = 'local for local data storage, gcp for cloud data storage')
+	parser.add_argument('-d', required = True, choices = ['local', 'gcp-small', 'gcp-large', 'aws-small', 'aws-large'], 
+		help = 'local for local data storage, gcp or aws for cloud data storage')
 	parser.add_argument('-b', required = True, type = int, help = 'batch size (number of frames per video)')
 	parser.add_argument('-train', action = 'store_true', help = 'flag to specify if you want to evaluate training set or not')
 	parser.add_argument('-test', action = 'store_true', help = 'flag to specify if you want to evaluate test set or not')

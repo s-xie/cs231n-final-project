@@ -26,8 +26,8 @@ EPOCHS = 5
 
 def clip():
 	parser = argparse.ArgumentParser(description = 'Specify training details')
-	parser.add_argument('-d', required = True, choices = ['local', 'gcp'], 
-		help = 'local for local data storage, gcp for cloud data storage')
+	parser.add_argument('-d', required = True, choices = ['local', 'gcp-small', 'gcp-large', 'aws-small', 'aws-large'], 
+		help = 'local for local data storage, gcp or aws for cloud data storage')
 	parser.add_argument('-m', required = True, type = str, help = 'path to model file')
 	args = parser.parse_args()
 	return args
