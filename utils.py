@@ -123,15 +123,9 @@ def get_ucf101_aws(num_classes, mode):
 	print('Loading training files (' + str(num_train_files) + ' batch(es)) ...') 
 	for i in range(1, num_train_files + 1):
 		# Get X_train_i
-		#source_blob_name = data_dir + 'X_train_' + str(i) + '.npy'
-		#destination_file_name = '/tmp/X_train_' + str(i) + '.npy'
-		#download_blob(bucket, source_blob_name, destination_file_name)
 		with smart_open.open(s3_prefix + 'X_train_' + str(i) + '.npy', mode = 'rb') as file:
 			batch = np.load(file, allow_pickle = True)
 		# Get y_train_i
-		#source_blob_name = data_dir + 'y_train_' + str(i) + '.npy'
-		#destination_file_name = '/tmp/y_train_' + str(i) + '.npy'
-		#download_blob(bucket, source_blob_name, destination_file_name)
 		with smart_open.open(s3_prefix + 'y_train_' + str(i) + '.npy', mode = 'rb') as file:
 			y = np.load(file, allow_pickle = True)
 			y = one_hot_encode(y, num_classes)
@@ -149,15 +143,9 @@ def get_ucf101_aws(num_classes, mode):
 	print('Loading dev files (' + str(num_dev_files) + ' batch(es)) ...')
 	for i in range(1, num_dev_files + 1):
 		# Get X_dev_i
-		#source_blob_name = data_dir + 'X_dev_' + str(i) + '.npy'
-		#destination_file_name = '/tmp/X_dev_' + str(i) + '.npy'
-		#download_blob(bucket, source_blob_name, destination_file_name)
 		with smart_open.open(s3_prefix + 'X_dev_' + str(i) + '.npy', mode = 'rb') as file:
 			batch = np.load(file, allow_pickle = True)
 		# Get y_dev_i
-		#source_blob_name = data_dir + 'y_dev_' + str(i) + '.npy'
-		#destination_file_name = '/tmp/y_dev_' + str(i) + '.npy'
-		#download_blob(bucket, source_blob_name, destination_file_name)
 		with smart_open.open(s3_prefix + 'y_dev_' + str(i) + '.npy', mode = 'rb') as file:
 			y = np.load(file, allow_pickle = True)
 			y = one_hot_encode(y, num_classes)

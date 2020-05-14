@@ -42,8 +42,10 @@ args = clip()
 data_flag = args.d
 if data_flag == 'local':
 	train_dataset, test_dataset, num_train_examples, num_test_examples = get_ucf101_local(N_CLASSES)
+elif 'gcp' in data_flag:
+	train_dataset, test_dataset, num_train_examples, num_test_examples = get_ucf101_gcp(N_CLASSES, data_flag)
 else:
-	train_dataset, test_dataset, num_train_examples, num_test_examples = get_cfar10_gcp(N_CLASSES)
+	train_dataset, test_dataset, num_train_examples, num_test_examples = get_ucf101_aws(N_CLASSES, data_flag)
 
 # Generate batches at tf.data.Dataset objects, applying augmentation to training set
 # normalization/resizing applied to both training and validation sets
