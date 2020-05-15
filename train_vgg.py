@@ -74,8 +74,9 @@ def freeze_layers(model):
 def add_layers(model):
 	x = model.output
 	x = Flatten()(x)
+	x = Dropout(0.5)(x)
 	x = Dense(512, activation = 'relu')(x)
-	# can add dropout here later
+	x = Dropout(0.5)(x)
 	out = Dense(N_CLASSES, activation = 'softmax')(x)
 	model = Model(inputs = model.input, outputs = out)
 	print('VGG16 model loaded and modified!')
