@@ -45,7 +45,7 @@ else:
 # normalization/resizing applied to both training and validation sets
 augmented_train_batches = (
 	train_dataset
-        .take(-1)
+		.take(-1)
 	.cache()
 	.shuffle(num_train_examples//4)
 	.map(augment, num_parallel_calls=AUTOTUNE)
@@ -55,8 +55,8 @@ augmented_train_batches = (
 
 validation_batches = (
 	test_dataset
-        .take(-1)
-        .cache()
+		.take(-1)
+		.cache()
 	.map(convert, num_parallel_calls=AUTOTUNE)
 	.batch(BATCH_SIZE)
 )
@@ -77,10 +77,10 @@ def add_layers(model):
 	#x = Dropout(0.8)(x)
 	#x = Dense(512, activation = 'relu', kernel_regularizer = regularizers.l2(1e-4))(x)
 	x = Dense(256, activation = 'relu')(x)
-        #x = Dropout(0.8)(x)
+	#x = Dropout(0.8)(x)
 	#out = Dense(N_CLASSES, activation = 'softmax', kernel_regularizer = regularizers.l2(1e-4))(x)
-        out = Dense(N_CLASSES, activation = 'softmax')(x)
-        model = Model(inputs = model.input, outputs = out)
+	out = Dense(N_CLASSES, activation = 'softmax')(x)
+	model = Model(inputs = model.input, outputs = out)
 	print('VGG16 model loaded and modified!')
 	return model
 
