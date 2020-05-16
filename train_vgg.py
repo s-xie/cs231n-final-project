@@ -1,6 +1,6 @@
 # Imports
 import tensorflow as tf
-from tensorflow.keras import layers, models, optimizers, losses
+from tensorflow.keras import layers, models, optimizers, losses, regularizers
 from tensorflow.keras.models import Model
 from tensorflow.keras.layers import Dense, Dropout, Activation, Flatten
 from tensorflow.keras.metrics import TopKCategoricalAccuracy, Accuracy
@@ -74,11 +74,13 @@ def freeze_layers(model):
 def add_layers(model):
 	x = model.output
 	x = Flatten()(x)
-	x = Dropout(0.5)(x)
-	x = Dense(512, activation = 'relu')(x)
-	x = Dropout(0.5)(x)
-	out = Dense(N_CLASSES, activation = 'softmax')(x)
-	model = Model(inputs = model.input, outputs = out)
+	#x = Dropout(0.8)(x)
+	#x = Dense(512, activation = 'relu', kernel_regularizer = regularizers.l2(1e-4))(x)
+	x = Dense(256, activation = 'relu')(x)
+        #x = Dropout(0.8)(x)
+	#out = Dense(N_CLASSES, activation = 'softmax', kernel_regularizer = regularizers.l2(1e-4))(x)
+        out = Dense(N_CLASSES, activation = 'softmax')(x)
+        model = Model(inputs = model.input, outputs = out)
 	print('VGG16 model loaded and modified!')
 	return model
 
@@ -114,7 +116,7 @@ model.compile(loss = 'categorical_crossentropy',
 							metrics = [TopKCategoricalAccuracy(k=1, name = 'accuracy'), TopKCategoricalAccuracy(k = 3, name = 'top3_accuracy'), TopKCategoricalAccuracy(k = 5, name = 'top5_accuracy')])
 print('Model compiled')
 
-model_history = model.fit(augmented_train_batches, epochs = 20, validation_data = validation_batches, callbacks = [checkpoint, early_stop])
+model_history = model.fit(augmented_train_batches, epochs = 10, validation_data = validation_batches, callbacks = [checkpoint, early_stop])
 
 # Save output
 np.save(os.path.join(model_folder, 'history.npy'), model_history.history)
