@@ -30,7 +30,12 @@ if data_flag == 'local':
 elif 'gcp' in data_flag:
 	train_dataset, test_dataset, num_train_examples, num_test_examples = get_ucf101_gcp(N_CLASSES, data_flag)
 else:
-	train_dataset, test_dataset, num_train_examples, num_test_examples = get_ucf101_aws(N_CLASSES, data_flag)
+	if args.test and args.train:
+		train_dataset, test_dataset, num_train_examples, num_test_examples = get_ucf101_aws(N_CLASSES, data_flag)
+	elif args.test:
+		_ , test_dataset, _ , num_test_examples = get_ucf101_aws(N_CLASSES, data_flag, 'test')
+	elif args.train:
+		train_dataset, _, num_train_examples, num_test_examples = get_ucf101_aws(N_CLASSES, data_flag, 'train')
 
 model = load_model(filepath = args.m, compile = False)
 print('Model Loaded!')

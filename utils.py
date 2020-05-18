@@ -107,7 +107,7 @@ def get_ucf101_local(num_classes):
 	print('Generated dev tf.data.dataset')
 	return train_dataset, dev_dataset, num_train_examples, num_dev_examples
 
-def get_ucf101_aws(num_classes, mode):
+def get_ucf101_aws(num_classes, mode, dataset = 'all'):
 	if mode == 'aws-small':
 		num_train_files = 2
 		num_dev_files = 1
@@ -119,52 +119,58 @@ def get_ucf101_aws(num_classes, mode):
 		data_dir = 'ucf101-large/'
 		s3_prefix = 's3://cs231n-bucket/ucf101-large/'
 
+	train_dataset, dev_dataset, num_train_examples, num_dev_examples = None, None, None, None
+
 	X_train, y_train = None, None
-	print('Loading training files (' + str(num_train_files) + ' batch(es)) ...') 
-	for i in range(1, num_train_files + 1):
-		# Get X_train_i
-		with smart_open.open(s3_prefix + 'X_train_' + str(i) + '.npy', mode = 'rb') as file:
-			batch = np.load(file, allow_pickle = True)
-		# Get y_train_i
-		with smart_open.open(s3_prefix + 'y_train_' + str(i) + '.npy', mode = 'rb') as file:
-			y = np.load(file, allow_pickle = True)
-			y = one_hot_encode(y, num_classes)
-		if i == 1:
-			X_train = batch
-			y_train = y
-		else:
-			X_train = np.concatenate((X_train, batch), axis = 0)
-			y_train = np.concatenate((y_train, y), axis = 0)
-		print('Loaded training batch ' + str(i))
-	print('Shape of X_train:', X_train.shape)
-	print('Shape of y_train:', y_train.shape)
+	if dataset != 'test':
+		print('Loading training files (' + str(num_train_files) + ' batch(es)) ...') 
+		for i in range(1, num_train_files + 1):
+			# Get X_train_i
+			with smart_open.open(s3_prefix + 'X_train_' + str(i) + '.npy', mode = 'rb') as file:
+				batch = np.load(file, allow_pickle = True)
+			# Get y_train_i
+			with smart_open.open(s3_prefix + 'y_train_' + str(i) + '.npy', mode = 'rb') as file:
+				y = np.load(file, allow_pickle = True)
+				y = one_hot_encode(y, num_classes)
+			if i == 1:
+				X_train = batch
+				y_train = y
+			else:
+				X_train = np.concatenate((X_train, batch), axis = 0)
+				y_train = np.concatenate((y_train, y), axis = 0)
+			print('Loaded training batch ' + str(i))
+		print('Shape of X_train:', X_train.shape)
+		print('Shape of y_train:', y_train.shape)
+		num_train_examples = X_train.shape[0]
 
 	X_dev, y_dev = None, None
-	print('Loading dev files (' + str(num_dev_files) + ' batch(es)) ...')
-	for i in range(1, num_dev_files + 1):
-		# Get X_dev_i
-		with smart_open.open(s3_prefix + 'X_dev_' + str(i) + '.npy', mode = 'rb') as file:
-			batch = np.load(file, allow_pickle = True)
-		# Get y_dev_i
-		with smart_open.open(s3_prefix + 'y_dev_' + str(i) + '.npy', mode = 'rb') as file:
-			y = np.load(file, allow_pickle = True)
-			y = one_hot_encode(y, num_classes)
-		if i == 1:
-			X_dev = batch
-			y_dev = y
-		else:
-			X_dev = np.concatenate((X_dev, batch), axis = 0)
-			y_dev = np.concatenate((y_dev, y), axis = 0)
-		print('Loaded dev batch ' + str(i))
-	print('Shape of X_dev:', X_dev.shape)
-	print('Shape of y_dev:', y_dev.shape)
+	if dataset != 'train':
+		print('Loading dev files (' + str(num_dev_files) + ' batch(es)) ...')
+		for i in range(1, num_dev_files + 1):
+			# Get X_dev_i
+			with smart_open.open(s3_prefix + 'X_dev_' + str(i) + '.npy', mode = 'rb') as file:
+				batch = np.load(file, allow_pickle = True)
+			# Get y_dev_i
+			with smart_open.open(s3_prefix + 'y_dev_' + str(i) + '.npy', mode = 'rb') as file:
+				y = np.load(file, allow_pickle = True)
+				y = one_hot_encode(y, num_classes)
+			if i == 1:
+				X_dev = batch
+				y_dev = y
+			else:
+				X_dev = np.concatenate((X_dev, batch), axis = 0)
+				y_dev = np.concatenate((y_dev, y), axis = 0)
+			print('Loaded dev batch ' + str(i))
+		print('Shape of X_dev:', X_dev.shape)
+		print('Shape of y_dev:', y_dev.shape)
+		num_dev_examples = X_dev.shape[0]
 
-	num_train_examples = X_train.shape[0]
-	num_dev_examples = X_dev.shape[0]
-	train_dataset = tf.data.Dataset.from_tensor_slices((X_train, y_train))
-	print('Generated training tf.data.dataset')
-	dev_dataset = tf.data.Dataset.from_tensor_slices((X_dev, y_dev))
-	print('Generated dev tf.data.dataset')
+	if dataset != 'test':
+		train_dataset = tf.data.Dataset.from_tensor_slices((X_train, y_train))
+		print('Generated training tf.data.dataset')
+	if dataset != 'train':
+		dev_dataset = tf.data.Dataset.from_tensor_slices((X_dev, y_dev))
+		print('Generated dev tf.data.dataset')
 	return train_dataset, dev_dataset, num_train_examples, num_dev_examples
 
 def get_ucf101_gcp(num_classes, mode):
