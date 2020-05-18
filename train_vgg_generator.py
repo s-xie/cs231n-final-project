@@ -5,6 +5,7 @@ from tensorflow.keras.models import Model
 from tensorflow.keras.layers import Dense, Dropout, Activation, Flatten
 from tensorflow.keras.metrics import TopKCategoricalAccuracy, Accuracy
 from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
 import pickle
 import numpy as np
 import matplotlib.pyplot as plt
@@ -26,40 +27,20 @@ lr = 1e-4
 
 def clip():
 	parser = argparse.ArgumentParser(description = 'Specify training details')
-	parser.add_argument('-d', required = True, choices = ['local', 'gcp-small', 'gcp-large', 'aws-small', 'aws-large'], 
+	parser.add_argument('-d', required = True, choices = ['aws-small', 'aws-large'], 
 		help = 'local for local data storage, gcp or aws for cloud data storage')
 	args = parser.parse_args()
 	return args
 
 # Load Training & Validation Data
 args = clip()
-data_flag = args.d
-if data_flag == 'local':
-	train_dataset, test_dataset, num_train_examples, num_test_examples = get_ucf101_local(N_CLASSES)
-elif 'gcp' in data_flag:
-	train_dataset, test_dataset, num_train_examples, num_test_examples = get_ucf101_gcp(N_CLASSES, data_flag)
-else:
-	train_dataset, test_dataset, num_train_examples, num_test_examples = get_ucf101_aws(N_CLASSES, data_flag)
+train_dataset, test_dataset, num_train_examples, num_test_examples = get_ucf101_aws_generator(N_CLASSES, args.d)
+X_train, y_train = train_dataset
+X_dev, y_dev = test_dataset
 
-# Generate batches at tf.data.Dataset objects, applying augmentation to training set
-# normalization/resizing applied to both training and validation sets
-augmented_train_batches = (
-	train_dataset
-	.take(-1)
-	.cache()
-	.shuffle(buffer_size = num_train_examples, reshuffle_each_iteration = True)
-	.map(augment, num_parallel_calls=AUTOTUNE)
-	.batch(BATCH_SIZE)
-	.prefetch(AUTOTUNE)
-)
-
-validation_batches = (
-	test_dataset
-	.take(-1)
-	.cache()
-	.map(convert, num_parallel_calls=AUTOTUNE)
-	.batch(BATCH_SIZE)
-)
+train_gen = ImageDataGenerator(rotation_range = 30, width_shift_range = 0.2, height_shift_range = 0.1, rescale = 1./255, 
+								horizontal_flip = True, fill_mode = 'nearest')
+dev_gen = ImageDataGenerator(rescale = 1./255)
 
 # Define and load model
 # borrowed from https://github.com/nnbenavides/Fine-Grained-Vehicle-Classification/blob/master/train_vgg_model.py
@@ -116,7 +97,10 @@ model.compile(loss = 'categorical_crossentropy',
 							metrics = [TopKCategoricalAccuracy(k=1, name = 'accuracy'), TopKCategoricalAccuracy(k = 3, name = 'top3_accuracy'), TopKCategoricalAccuracy(k = 5, name = 'top5_accuracy')])
 print('Model compiled')
 
-model_history = model.fit(augmented_train_batches, epochs = 30, validation_data = validation_batches, callbacks = [checkpoint, early_stop])
+model_history = model.fit(train_gen.flow(X_train, y_train, shuffle = True, batch_size = BATCH_SIZE),
+									steps_per_epoch = num_train_examples // BATCH_SIZE, epochs = 30,
+									validation_data = dev_gen.flow(X_dev, y_dev, shuffle = True, batch_size = BATCH_SIZE),
+									validation_steps = num_test_examples // BATCH_SIZE, callbacks = [checkpoint, early_stop])
 
 # Save output
 np.save(os.path.join(model_folder, 'history.npy'), model_history.history)
