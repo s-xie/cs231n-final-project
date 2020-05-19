@@ -55,12 +55,12 @@ def freeze_layers(model):
 def add_layers(model):
 	x = model.output
 	x = Flatten()(x)
-	x = Dropout(0.75)(x)
-	#x = Dense(64, activation = 'relu', kernel_regularizer = regularizers.l2(1e-4))(x)
-	x = Dense(256, activation = 'relu')(x)
-	x = Dropout(0.75)(x)
-	#out = Dense(N_CLASSES, activation = 'softmax', kernel_regularizer = regularizers.l2(1e-4))(x)
-	out = Dense(N_CLASSES, activation = 'softmax')(x)
+	x = Dropout(0.8)(x)
+	x = Dense(512, activation = 'relu', kernel_regularizer = regularizers.l2(1e-4))(x)
+	#x = Dense(256, activation = 'relu')(x)
+	x = Dropout(0.8)(x)
+	out = Dense(N_CLASSES, activation = 'softmax', kernel_regularizer = regularizers.l2(1e-4))(x)
+	#out = Dense(N_CLASSES, activation = 'softmax')(x)
 	model = Model(inputs = model.input, outputs = out)
 	print('VGG16 model loaded and modified!')
 	return model
@@ -98,7 +98,7 @@ model.compile(loss = 'categorical_crossentropy',
 print('Model compiled')
 
 model_history = model.fit(train_gen.flow(X_train, y_train, shuffle = True, batch_size = BATCH_SIZE),
-									steps_per_epoch = num_train_examples // BATCH_SIZE, epochs = 30,
+									steps_per_epoch = num_train_examples // BATCH_SIZE, epochs = 18,
 									validation_data = dev_gen.flow(X_dev, y_dev, shuffle = True, batch_size = BATCH_SIZE),
 									validation_steps = num_test_examples // BATCH_SIZE, callbacks = [checkpoint, early_stop])
 
