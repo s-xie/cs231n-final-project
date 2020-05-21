@@ -8,6 +8,7 @@ from tensorflow.keras import layers, models, optimizers, losses
 from tensorflow.keras.metrics import TopKCategoricalAccuracy, Accuracy
 from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping
 from tensorflow.keras.layers import Dense, Dropout, Activation, Flatten
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
 import os
 import matplotlib.pyplot as plt
 from utils import *
@@ -19,6 +20,7 @@ BATCH_SIZE = 32
 N_CLASSES = 101
 N_LAYERS_TO_FREEZE = 17 # freeze everything before the last conv layer
 lr = 1e-4
+EPOCHS = 5
 
 def clip():
 	parser = argparse.ArgumentParser(description = 'Specify training details')
@@ -75,7 +77,7 @@ early_stop = EarlyStopping(monitor = 'val_accuracy', patience = 20)
 # Fine-tune model
 #model_history = q_aware_model.fit(augmented_train_batches, epochs = 5, validation_data = validation_batches, callbacks = [checkpoint, early_stop])
 model_history = q_aware_model.fit(train_gen.flow(X_train, y_train, shuffle = True, batch_size = BATCH_SIZE),
-									steps_per_epoch = num_train_examples // BATCH_SIZE, epochs = 18,
+									steps_per_epoch = num_train_examples // BATCH_SIZE, epochs = EPOCHS,
 									validation_data = dev_gen.flow(X_dev, y_dev, shuffle = True, batch_size = BATCH_SIZE),
 									validation_steps = num_test_examples // BATCH_SIZE, callbacks = [checkpoint, early_stop])
 
