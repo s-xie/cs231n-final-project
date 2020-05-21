@@ -57,10 +57,8 @@ def add_layers(model):
 	x = Flatten()(x)
 	x = Dropout(0.8)(x)
 	x = Dense(512, activation = 'relu', kernel_regularizer = regularizers.l2(1e-4))(x)
-	#x = Dense(256, activation = 'relu')(x)
 	x = Dropout(0.8)(x)
 	out = Dense(N_CLASSES, activation = 'softmax', kernel_regularizer = regularizers.l2(1e-4))(x)
-	#out = Dense(N_CLASSES, activation = 'softmax')(x)
 	model = Model(inputs = model.input, outputs = out)
 	print('VGG16 model loaded and modified!')
 	return model
