@@ -36,7 +36,7 @@ for f_name in glob.glob(RAW_DATA_DIR+"*"):
 classes = sorted(list(classes))
 for i, c in enumerate(classes):
     class_dict[c] = i  
-np.save('class_dict.npy', class_dict)
+np.save('class_dict.npy', class_dict, allow_pickle = True)
 
 train_files = set()
 dev_files = set()
