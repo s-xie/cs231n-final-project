@@ -57,6 +57,8 @@ def evaluate_model(model, dataset, num_examples, batch_size, mode, model_path, e
 	preds_avg = np.zeros(num_batches)
 	actual_classes = np.empty(num_batches)
 	preds_avg_top5 = np.zeros((num_batches, 5))
+	class_correct = np.zeros(N_CLASSES)
+	class_total = np.zeros(N_CLASSES)
 	
 	if error_flag:
 		error_images = []
@@ -84,7 +86,12 @@ def evaluate_model(model, dataset, num_examples, batch_size, mode, model_path, e
 		pred_classes = preds.argmax(axis = 1)
 		preds_mode[counter] = stats.mode(pred_classes)[0][0]
 
-		# Error analysis w/ reservoir sampling
+		# Compute class accuracies
+		class_total[int(actual_classes[counter])] += 1
+		if preds_avg[counter] == actual_classes[counter]:
+			class_correct[int(actual_classes[counter])] += 1
+
+		# Error analysis w/ reservoir sampling - used for manual inspection
 		if error_flag and (preds_avg[counter] != actual_classes[counter]):
 			if len(error_images) < ERROR_ANALYSIS_EXAMPLES:
 				error_images.append(batch_x)
@@ -144,10 +151,15 @@ def evaluate_model(model, dataset, num_examples, batch_size, mode, model_path, e
 				img_filepath = os.path.join(example_folder, img_filename)
 				plt.imsave(img_filepath, image)
 
+		class_accs = [correct/(total + 1e-7) for correct, total in zip(class_correct, class_total)]
+		with open(os.path.join(error_folder, 'class_accuracies.txt'), mode = 'w+') as out_file:
+			for i in range(N_CLASSES):
+				out_file.write(reversed_dict[i] + ' Accuracy: {:2f}'.format(100*class_accs[i]) + '\n')
+
 if args.test:
 	validation_batches = (
 		test_dataset
-		.take(50)
+		.take(-1)
 		.cache()
 		.map(convert, num_parallel_calls=AUTOTUNE)
 		.batch(batch_size)
