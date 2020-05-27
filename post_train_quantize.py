@@ -1,6 +1,7 @@
 # Imports
 import tensorflow as tf
 from tensorflow.keras.models import load_model
+import tensorflow_model_optimization as tfmot
 import os
 import pathlib
 import argparse
@@ -17,7 +18,8 @@ args = clip()
 
 # Load model
 model_path = args.m
-model = load_model(filepath = model_path, compile = True)
+with tfmot.quantization.keras.quantize_scope():
+    model = load_model(filepath = model_path, compile = True)
 print('Model Loaded!')
 
 # Convert model to TFLite
