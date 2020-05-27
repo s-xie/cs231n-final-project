@@ -6,10 +6,12 @@ from sklearn.metrics import accuracy_score
 from tqdm import tqdm
 from tensorflow.keras.metrics import TopKCategoricalAccuracy
 import os
+import matplotlib.pyplot as plt
 from utils import *
 AUTOTUNE = tf.data.experimental.AUTOTUNE
 
 N_CLASSES = 101
+ERROR_ANALYSIS_EXAMPLES = 200
 
 def clip():
 	parser = argparse.ArgumentParser(description = 'Specify evaluation details')
@@ -19,12 +21,14 @@ def clip():
 	parser.add_argument('-train', action = 'store_true', help = 'flag to specify if you want to evaluate training set or not')
 	parser.add_argument('-test', action = 'store_true', help = 'flag to specify if you want to evaluate test set or not')
 	parser.add_argument('-m', required = True, type = str, help = 'path to model file')
+	parser.add_argument('-err', action = 'store_true', help = 'flag to specify if you want to store some misclassifications for error analysis')
 	args = parser.parse_args()
 	return args
 
 # Load Training & Validation Data
 args = clip()
 data_flag = args.d
+error_flag = args.err
 if data_flag == 'local':
 	train_dataset, test_dataset, num_train_examples, num_test_examples = get_ucf101_local(N_CLASSES)
 elif 'gcp' in data_flag:
@@ -42,7 +46,7 @@ print('Model Loaded!')
 
 batch_size = args.b
 
-def evaluate_model(model, dataset, num_examples, batch_size, mode, model_path):
+def evaluate_model(model, dataset, num_examples, batch_size, mode, model_path, error_flag):
 	if mode == 'train':
 		print('Evaluating Training Set...')
 	elif mode == 'test':
@@ -53,6 +57,17 @@ def evaluate_model(model, dataset, num_examples, batch_size, mode, model_path):
 	preds_avg = np.zeros(num_batches)
 	actual_classes = np.empty(num_batches)
 	preds_avg_top5 = np.zeros((num_batches, 5))
+	class_correct = np.zeros(N_CLASSES)
+	class_total = np.zeros(N_CLASSES)
+	
+	if error_flag:
+		error_images = []
+		error_pred_classes = []
+		error_actual_classes = []
+		error_pred_classes_video = []
+		error_counter = 0
+		class_dict = np.load('class_dict.npy', allow_pickle = True).item()
+		reversed_dict = {v: k for k, v in class_dict.items()}
 
 	counter = 0
 	for element in tqdm(dataset.as_numpy_iterator()):
@@ -70,6 +85,30 @@ def evaluate_model(model, dataset, num_examples, batch_size, mode, model_path):
 		# Mode voting scheme
 		pred_classes = preds.argmax(axis = 1)
 		preds_mode[counter] = stats.mode(pred_classes)[0][0]
+
+		# Compute class accuracies
+		class_total[int(actual_classes[counter])] += 1
+		if preds_avg[counter] == actual_classes[counter]:
+			class_correct[int(actual_classes[counter])] += 1
+
+		# Error analysis w/ reservoir sampling - used for manual inspection
+		if error_flag and (preds_avg[counter] != actual_classes[counter]):
+			if len(error_images) < ERROR_ANALYSIS_EXAMPLES:
+				error_images.append(batch_x)
+				error_actual_classes.append(actual_classes[counter])
+				error_pred_classes.append(pred_classes)
+				error_pred_classes_video.append(preds_avg[counter])
+				error_counter += 1
+			else:
+				replace = np.random.rand() < ((ERROR_ANALYSIS_EXAMPLES - 1)/error_counter)
+				if replace:
+					rand_idx = np.random.randint(0, ERROR_ANALYSIS_EXAMPLES)
+					error_images[rand_idx] = batch_x 
+					error_actual_classes[rand_idx] = actual_classes[counter]
+					error_pred_classes[rand_idx] = pred_classes
+					error_pred_classes_video[rand_idx] = preds_avg[counter]
+				error_counter += 1
+
 		counter += 1
 
 	mode_acc = accuracy_score(actual_classes, preds_mode)
@@ -98,6 +137,25 @@ def evaluate_model(model, dataset, num_examples, batch_size, mode, model_path):
 		out_file.write('Top 5 Accuracy (Average Voting Scheme): ' + str(avg_acc_top5) + '\n')
 		out_file.write('\n')
 
+	if error_flag:
+		error_folder = os.path.join(model_folder, 'errors_' + model_filename + '/')
+		if not os.path.exists(error_folder):
+			os.mkdir(error_folder)
+		for i, images in enumerate(error_images):
+			example_folder = str(i) + ' - pred = ' + reversed_dict[int(error_pred_classes_video[i])] + ' - actual = ' + reversed_dict[int(error_actual_classes[i])] + '/'
+			example_folder = os.path.join(error_folder, example_folder)
+			os.mkdir(example_folder)
+			for j in range(batch_size):
+				image = images[j,:,:,:]
+				img_filename = str(j) + ' - pred = ' + reversed_dict[int(error_pred_classes[i][j])] + '.jpg'
+				img_filepath = os.path.join(example_folder, img_filename)
+				plt.imsave(img_filepath, image)
+
+		class_accs = [correct/(total + 1e-7) for correct, total in zip(class_correct, class_total)]
+		with open(os.path.join(error_folder, 'class_accuracies.txt'), mode = 'w+') as out_file:
+			for i in range(N_CLASSES):
+				out_file.write(reversed_dict[i] + ' Accuracy: {:2f}'.format(100*class_accs[i]) + '\n')
+
 if args.test:
 	validation_batches = (
 		test_dataset
@@ -106,7 +164,7 @@ if args.test:
 		.map(convert, num_parallel_calls=AUTOTUNE)
 		.batch(batch_size)
 	)
-	evaluate_model(model, validation_batches, num_test_examples, batch_size, 'test', args.m)
+	evaluate_model(model, validation_batches, num_test_examples, batch_size, 'test', args.m, error_flag)
 	
 if args.train:
 	train_batches = (
@@ -116,4 +174,4 @@ if args.train:
 		.map(convert, num_parallel_calls=AUTOTUNE)
 		.batch(batch_size)
 	)
-	evaluate_model(model, train_batches, num_train_examples, batch_size, 'train', args.m)
+	evaluate_model(model, train_batches, num_train_examples, batch_size, 'train', args.m, False)
