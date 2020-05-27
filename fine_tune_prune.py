@@ -22,7 +22,8 @@ BATCH_SIZE = 32
 N_CLASSES = 101
 N_LAYERS_TO_FREEZE = 17 # freeze everything before the last conv layer
 lr = 1e-4
-EPOCHS = 5
+EPOCHS = 10
+sparsity_target = 0.7 # indicates final sparsity target for pruning; between 0 and 1
 
 def clip():
 	parser = argparse.ArgumentParser(description = 'Specify training details')
@@ -58,8 +59,8 @@ print('Model Loaded!')
 def apply_pruning_to_dense(layer):
   end_step = np.ceil(1.0 * num_train_examples / BATCH_SIZE).astype(np.int32) * EPOCHS
   pruning_params = {
-      'pruning_schedule': sparsity.PolynomialDecay(initial_sparsity=0.50,
-                                                   final_sparsity=0.90,
+      'pruning_schedule': sparsity.PolynomialDecay(initial_sparsity=0.0,
+                                                   final_sparsity=sparsity_target,
                                                    begin_step=0,
                                                    end_step=end_step,
                                                    frequency=100)
@@ -79,10 +80,10 @@ pruned_model.compile(optimizer = adam, loss = 'categorical_crossentropy',
 # Define callbacks
 model_folder = os.path.dirname(model_path)
 model_filename = os.path.basename(model_path)
-output_filename = model_filename[:model_filename.index('.hdf5')] + '_prune.hdf5'
-checkpoint = ModelCheckpoint(filepath = os.path.join(model_folder, output_filename), save_best_only = True,
+output_filename = model_filename[:model_filename.index('.hdf5')] + '_prune' + str(sparsity_target) + '.hdf5'
+checkpoint = ModelCheckpoint(filepath = os.path.join(model_folder, output_filename), save_best_only = False,
 							monitor = 'val_accuracy', save_weights_only = False, verbose = 0)
-early_stop = EarlyStopping(monitor = 'val_accuracy', patience = 20)
+#early_stop = EarlyStopping(monitor = 'val_accuracy', patience = 20)
 pruning_step = sparsity.UpdatePruningStep()
 log_folder = os.path.join(model_folder, 'logs/')
 if not os.path.exists(log_folder):
@@ -95,7 +96,12 @@ pruning_summary = sparsity.PruningSummaries(log_dir=log_folder, profile_batch=0)
 model_history = pruned_model.fit(train_gen.flow(X_train, y_train, shuffle = True, batch_size = BATCH_SIZE),
 									steps_per_epoch = num_train_examples // BATCH_SIZE, epochs = EPOCHS,
 									validation_data = dev_gen.flow(X_dev, y_dev, shuffle = True, batch_size = BATCH_SIZE),
-									validation_steps = num_test_examples // BATCH_SIZE, callbacks = [checkpoint, early_stop, pruning_step, pruning_summary])
+									validation_steps = num_test_examples // BATCH_SIZE, callbacks = [checkpoint, pruning_step, pruning_summary]) #took out early_stop
+
+pruned_output_filename = output_filename[:-5] + '_comp.hdf5'
+export_model = tfmot.sparsity.keras.strip_pruning(pruned_model)
+tf.keras.models.save_model(export_model, pruned_output_filename, include_optimizer=False)
+
 # Save output
 plot_folder = os.path.join(model_folder, 'plots/')
 np.save(os.path.join(model_folder, 'history_prune.npy'), model_history.history)
